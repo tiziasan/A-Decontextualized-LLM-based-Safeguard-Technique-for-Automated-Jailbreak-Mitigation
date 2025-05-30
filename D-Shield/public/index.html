@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat con OpenAI</title>
+ <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      background: #f7f9fc;
+      display: flex;
+      flex-direction: row;
+      align-items: center; /* centrato verticalmente */
+      justify-content: center;
+      gap: 20px;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    .container {
+      height: 800px;
+      background: #fff;
+      width: 100%;
+      max-width: 600px;
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      /* ancoraggio input in basso */
+    }
+    h2 { margin-bottom: 12px; color: #333; }
+    #chatHistory {
+      list-style: none;
+      max-height: 550px;
+      overflow-y: auto;
+      margin-bottom: 16px;
+      padding-right: 10px;
+      flex-grow: 1;
+      max-height: none;
+
+    }
+    #firstCallsHistory {
+      list-style: none;
+      overflow-y: auto;
+      margin-bottom: 16px;
+      padding-right: 10px;
+      flex-grow: 1;
+      /* rimuove il limite di altezza per riempire il container */
+      max-height: none;
+    }
+    li {
+      margin-bottom: 8px;
+      padding: 8px;
+      border-radius: 6px;
+      line-height: 1.4;
+    }
+    .user { background: #e1f5fe; text-align: right; }
+    .bot { background: #f1f8e9; text-align: left; }
+    .input-group { display: flex; gap: 8px; }
+    textarea {
+      flex-grow: 1;
+      resize: none;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      padding: 8px;
+      font-size: 14px;
+      min-height: 60px;
+    }
+    button {
+      background: #007bff;
+      color: #fff;
+      border: none;
+      padding: 0 16px;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover { background: #0056b3; }
+      /* Specific layout for containers */
+    #secondContainer {
+      justify-content: space-between;
+    }
+    #firstContainer {
+      justify-content: flex-start;
+    }
+  </style>
+</head>
+<body>
+  <div class="container" id="secondContainer">
+    <h2>ChatGPT-4o with Decontextualized Guard</h2>
+    <ul id="chatHistory"></ul>
+    <div class="input-group">
+      <textarea id="inputMessage" placeholder="Write your message..."></textarea>
+      <button id="sendBtn">Send</button>
+    </div>
+  </div>
+
+  <div class="container" id="firstContainer">
+    <h2>ChatGPT-4o Standard</h2>
+    <ul id="firstCallsHistory"></ul>
+  </div>
+
+  <script>
+    const chatHistory = document.getElementById('chatHistory');
+    const firstCallsHistory = document.getElementById('firstCallsHistory');
+    const conversationHistory = [];
+
+    document.getElementById('sendBtn').addEventListener('click', async () => {
+      const input = document.getElementById('inputMessage');
+      const message = input.value.trim();
+      if (!message) return;
+
+      conversationHistory.push({ role: 'user', content: message });
+      const userLi = document.createElement('li');
+      userLi.className = 'user';
+      userLi.textContent = message;
+      chatHistory.appendChild(userLi);
+      input.value = '';
+      chatHistory.scrollTop = chatHistory.scrollHeight;
+
+      try {
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message, history: conversationHistory })
+        });
+        const data = await res.json();
+
+        const botLi = document.createElement('li');
+        botLi.className = 'bot';
+        botLi.textContent = data.reply;
+        chatHistory.appendChild(botLi);
+        chatHistory.scrollTop = chatHistory.scrollHeight;
+
+        const queryLi = document.createElement('li');
+        queryLi.className = 'user';
+        queryLi.textContent = `${message}`;
+        firstCallsHistory.appendChild(queryLi);
+        const firstLi = document.createElement('li');
+        firstLi.className = 'bot';
+        firstLi.textContent = `${data.firstReply}`;
+        firstCallsHistory.appendChild(firstLi);
+        firstCallsHistory.scrollTop = firstCallsHistory.scrollHeight;
+
+        conversationHistory.push({ role: 'assistant', content: data.reply });
+      } catch (err) {
+        console.error(err);
+      }
+    });
+  </script>
+</body>
+</html>
